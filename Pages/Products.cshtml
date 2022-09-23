@@ -1,0 +1,169 @@
+﻿@page
+
+@{
+}
+
+
+<head>
+    <meta charset="utf-8" />
+    <title>Product Home</title>
+
+
+</head>
+<body>
+
+    <style>
+        .html {
+            font: 12px sans-serif;
+        }
+    </style>
+
+    <span id="notification"></span>
+    <div id="my-grid"></div>
+
+    <script>
+        var productCategories = [];
+
+        $("#notification").kendoNotification({
+            width: "20em"
+        });
+        var kendoUrl = "https://localhost:44333/api";
+        ///generic structure to create and return settings for ajax call.
+        function getsettingsforajaxcall(endpointUrl, httpVerb) {
+
+            let settings = {
+                "url": endpointUrl,
+                "type": httpVerb,
+                "timeout": 0
+            }
+
+            return settings;
+        }
+
+        function testDateValidation(element) {
+            if (element[0] !== null) {
+                if (element[0].name === "ManufactureDate") {
+                    //Date logic here
+                    return false;
+                }
+                else
+                    return true;
+            }
+        }
+
+        // Custom logic end.
+        $(document).ready(function () {
+            // loadProductCategories();
+            var productDataSource = new kendo.data.DataSource({
+                transport: {
+                    read: {
+                        url: `${kendoUrl}/products`,
+                        dataType: "json",
+                        type: "GET",
+                    },
+                    update: {
+                        url: `${kendoUrl}/products`,
+                        dataType: "json",
+                        type: "PUT",
+                        contentType: "application/json",
+                    },
+                    create: {
+                        url: `${kendoUrl}/products`,
+                        dataType: "json",
+                        type: "POST",
+                        contentType: "application/json"
+                    },
+                    parameterMap: function (options, operation) {
+                        if (operation !== "read" && options.models) {
+                            if (operation === 'create') {
+                                options.models[0]['productCode'] = null;
+                            }
+                            return kendo.stringify(options.models);
+                        }
+                    }
+                },
+                error: function (e) {
+                    // Handle data operation error.
+                    if (!e.errorThrown) {
+                        $("#notification")?.getKendoNotification()?.show("Error, " + e.xhr.status);
+                    }
+                    else {
+                        $("#notification")?.getKendoNotification()?.show("Status: " + e.status + "; Error message: " + e.errorThrown);
+                        //alert("Status: " + e.status + "; Error message: " + e.errorThrown);
+                    }
+                    
+                },
+                batch: true,
+                pageSize: 20,
+                //autoSync: true,
+                schema: {
+                    model: {
+                        id: "ProductCode",
+                        fields: {
+                            ProductCode: { from: "productCode", editable: false, nullable: false },
+                            Name: {
+                                from: "name", type: "string", nullable: false, validation: { required: true, text: "ProductName cannot be empty" }
+                            },
+                            CategoryName: { from: "categoryName", type: "string", validation: { required: true, text: "Category name cannot be empty" } },
+                            UnitPrice: { from: "unitPrice", type: "number", validation: { min: 0, text: "Price should be greater than 0" } },
+                            ManufactureDate: { from: "manufactureDate", type: "string", validation: { required: true, validationMessage: "Manufactor date cannot be empty", /*custom: testDateValidation*/ } }
+                        }
+
+                    }
+                }
+            });
+
+
+            productDataSource.fetch(function (e) {
+                //product.set("UnitPrice", 20);
+                productDataSource.sync(); //makes request to https://demos.telerik.com/kendo-ui/service/products/update
+            });
+
+            // Target the div element by using jQuery and then call the kendoGrid() method.
+            $("#my-grid").kendoGrid({
+                dataSource: productDataSource,
+                height: "400px",
+                toolbar: ["create", "search"],
+                search: {
+                    fields: ["Name", "CategoryName"]
+                },
+                noRecords: true,
+                // Enable the filtering functionality.
+                filterable: true,
+                // Enable the editing functionality (incell by default).
+                editable: "inline",
+                //autoSync: true,
+                selectable: true,
+                sortable: true,
+                noRecords: true,
+                remove: function (e) {
+                    e.preventDefault();
+                    let endpointUrl = `${kendoUrl}/products/${e.model.ProductCode}`;
+                    const settings = getsettingsforajaxcall(endpointUrl, 'DELETE');
+
+                    $.ajax(settings).done(function (data, textStatus, jqXHR) {
+                        if (textStatus == 'success') {
+                            console.log('deleted');
+                        }
+                    });
+                },
+                columns: [
+                    // The field matches the ID property in the data array.
+                    { field: "ProductCode", title: "Product Code", width: "5%" },
+                    { field: "Name", title: "Name", width: "20%" },
+                    {
+                        field: "CategoryName",
+                        title: "Category",
+                        width: "20%"
+
+                    },
+                    { field: "UnitPrice", title: "Price", width: "10%" },
+                    { field: "ManufactureDate", title: "Manufacturing Date", width: "25%", format: "{0:dd-MM-yyyy}" },
+                    { command: ["edit", "destroy"], title: "&nbsp;", width: "200px" }
+                ],
+                editable: "inline"
+            });
+        });
+
+    </script>
+</body>
