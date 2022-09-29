@@ -1,0 +1,10 @@
+# ignore bin and obj folders
+bin/
+obj/
+
+
+# ignore .vs
+.vs/
+
+# ignore appsettings.json
+appsettings.json
